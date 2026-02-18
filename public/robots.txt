@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://pages-cms.github.io/editor/sitemap.xml

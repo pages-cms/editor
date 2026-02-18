@@ -58,7 +58,7 @@ function HighlightedCode({ code, lang, dark }: HighlightedCodeProps) {
 
   return (
     <div
-      className="bg-accent dark:bg-accent/50 mt-4 rounded-lg [&_pre]:bg-accent! dark:[&_pre]:bg-accent/50! [&_pre]:m-0 [&_pre]:p-4 [&_pre]:text-sm [&_pre]:whitespace-pre-wrap [&_pre]:break-words [&_code]:whitespace-pre-wrap [&_code]:break-words"
+      className="bg-accent dark:bg-accent/50 mt-4 overflow-hidden rounded-lg [&_pre]:m-0 [&_pre]:rounded-[inherit] [&_pre]:bg-accent! dark:[&_pre]:bg-accent/50! [&_pre]:p-4 [&_pre]:text-sm [&_pre]:whitespace-pre-wrap [&_pre]:break-words [&_code]:whitespace-pre-wrap [&_code]:break-words"
       dangerouslySetInnerHTML={{ __html: html }}
     />
   );
@@ -110,7 +110,7 @@ export default function App() {
             <h1 className="order-2 w-full scroll-m-24 text-3xl font-semibold tracking-tight sm:text-3xl md:order-1 md:w-auto">
               Page Editor
             </h1>
-            <div className="order-1 ml-auto flex items-center gap-3 md:order-2">
+            <div className="order-1 ml-auto flex items-center gap-2 md:order-2">
               <Button asChild variant="secondary" size="sm">
                 <a href="https://github.com/pages-cms/editor" target="_blank" rel="noreferrer">
                   <Github className="size-4" />

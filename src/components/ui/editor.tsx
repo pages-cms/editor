@@ -1,5 +1,5 @@
 import { type HTMLAttributes, useEffect, useRef, useState } from "react";
-import { EditorContent, useEditor } from "@tiptap/react";
+import { EditorContent, useEditor, useEditorState } from "@tiptap/react";
 import { BubbleMenu } from "@tiptap/react/menus";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
@@ -147,6 +147,49 @@ export function Editor({
     },
   });
 
+  const activeState = useEditorState({
+    editor,
+    selector: ({ editor: currentEditor }) => {
+      if (!currentEditor) {
+        return {
+          blockType: "paragraph" as BlockType,
+          bold: false,
+          italic: false,
+          underline: false,
+          strike: false,
+          code: false,
+          link: false,
+        };
+      }
+
+      const blockType: BlockType = currentEditor.isActive("heading", { level: 1 })
+        ? "heading1"
+        : currentEditor.isActive("heading", { level: 2 })
+          ? "heading2"
+          : currentEditor.isActive("heading", { level: 3 })
+            ? "heading3"
+            : currentEditor.isActive("bulletList")
+              ? "bulletList"
+              : currentEditor.isActive("orderedList")
+                ? "orderedList"
+                : currentEditor.isActive("blockquote")
+                  ? "blockquote"
+                  : currentEditor.isActive("codeBlock")
+                    ? "codeBlock"
+                    : "paragraph";
+
+      return {
+        blockType,
+        bold: currentEditor.isActive("bold"),
+        italic: currentEditor.isActive("italic"),
+        underline: currentEditor.isActive("underline"),
+        strike: currentEditor.isActive("strike"),
+        code: currentEditor.isActive("code"),
+        link: currentEditor.isActive("link"),
+      };
+    },
+  });
+
   useEffect(() => {
     if (!editor) return;
     const current = format === "markdown" ? editor.getMarkdown() : editor.getHTML();
@@ -263,17 +306,6 @@ export function Editor({
 
   if (!editor) return null;
 
-  const getBlockType = (): BlockType => {
-    if (editor.isActive("heading", { level: 1 })) return "heading1";
-    if (editor.isActive("heading", { level: 2 })) return "heading2";
-    if (editor.isActive("heading", { level: 3 })) return "heading3";
-    if (editor.isActive("bulletList")) return "bulletList";
-    if (editor.isActive("orderedList")) return "orderedList";
-    if (editor.isActive("blockquote")) return "blockquote";
-    if (editor.isActive("codeBlock")) return "codeBlock";
-    return "paragraph";
-  };
-
   const setBlockType = (next: BlockType) => {
     const chain = editor.chain().focus();
 
@@ -311,35 +343,35 @@ export function Editor({
     {
       label: "Bold",
       icon: Bold,
-      isActive: () => editor.isActive("bold"),
+      isActive: () => activeState.bold,
       run: () => editor.chain().focus().toggleBold().run(),
       toggle: true,
     },
     {
       label: "Italic",
       icon: Italic,
-      isActive: () => editor.isActive("italic"),
+      isActive: () => activeState.italic,
       run: () => editor.chain().focus().toggleItalic().run(),
       toggle: true,
     },
     {
       label: "Underline",
       icon: UnderlineIcon,
-      isActive: () => editor.isActive("underline"),
+      isActive: () => activeState.underline,
       run: () => editor.chain().focus().toggleUnderline().run(),
       toggle: true,
     },
     {
       label: "Strikethrough",
       icon: Strikethrough,
-      isActive: () => editor.isActive("strike"),
+      isActive: () => activeState.strike,
       run: () => editor.chain().focus().toggleStrike().run(),
       toggle: true,
     },
     {
       label: "Code",
       icon: Code,
-      isActive: () => editor.isActive("code"),
+      isActive: () => activeState.code,
       run: () => editor.chain().focus().toggleCode().run(),
       toggle: true,
     },
@@ -509,7 +541,7 @@ export function Editor({
             <div className="group/native-select relative w-fit">
               <select
                 id="block-style"
-                value={getBlockType()}
+                value={activeState.blockType}
                 onChange={(event) => setBlockType(event.target.value as BlockType)}
                 disabled={disabled}
                 aria-label="Block style"
@@ -542,7 +574,7 @@ export function Editor({
               onClick: openLinkInput,
               disabled,
               toggle: true,
-              pressed: showLinkInput || editor.isActive("link"),
+              pressed: showLinkInput || activeState.link,
             })}
             {isOnImage ? (
               <button
@@ -552,7 +584,7 @@ export function Editor({
                 aria-pressed={showAltInput}
                 onClick={toggleAltInput}
                 disabled={disabled}
-                className={`${toolbarToggleButtonClass} w-auto px-2 text-xs font-medium`}
+                className={`${toolbarToggleButtonClass} size-7 text-xs`}
               >
                 ALT
               </button>
