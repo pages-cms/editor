@@ -1,8 +1,11 @@
 import { forwardRef, useEffect, useImperativeHandle, useState } from "react";
 import type { Editor } from "@tiptap/core";
+import type { LucideIcon } from "lucide-react";
+import { Ban } from "lucide-react";
 
 export type SlashItem = {
   title: string;
+  icon: LucideIcon;
   command: (params: { editor: Editor; range: { from: number; to: number } }) => void;
 };
 
@@ -54,7 +57,7 @@ const CommandsList = forwardRef<CommandsListHandle, CommandsListProps>(({ items,
   }));
 
   return (
-    <div>
+    <div className="bg-popover text-popover-foreground border-border z-50 min-w-44 overflow-hidden rounded-md border p-1 shadow-md">
       {items.length ? (
         items.map((item, index) => (
           <button
@@ -62,12 +65,17 @@ const CommandsList = forwardRef<CommandsListHandle, CommandsListProps>(({ items,
             type="button"
             onClick={() => selectItem(index)}
             aria-selected={selectedIndex === index}
+            className="focus:bg-accent focus:text-accent-foreground aria-selected:bg-accent aria-selected:text-accent-foreground relative flex w-full cursor-default items-center rounded-sm px-2 py-1.5 text-sm outline-none"
           >
+            <item.icon className="mr-2 size-4" />
             {item.title}
           </button>
         ))
       ) : (
-        <div>No results</div>
+        <div className="text-muted-foreground flex items-center px-2 py-1.5 text-sm">
+          <Ban className="mr-2 size-4" />
+          No results
+        </div>
       )}
     </div>
   );

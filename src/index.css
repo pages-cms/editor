@@ -4,6 +4,7 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
+    --font-mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
     --radius-sm: calc(var(--radius) - 4px);
     --radius-md: calc(var(--radius) - 2px);
     --radius-lg: var(--radius);
@@ -122,7 +123,7 @@
     font-family: "Geist Sans", "Geist", ui-sans-serif, system-ui, sans-serif;
     }
   code, pre, textarea {
-    font-family: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-family: var(--font-mono);
   }
 }
 
@@ -168,7 +169,7 @@
   }
 
   .cn-editor .tiptap a {
-    @apply font-medium text-primary underline underline-offset-4;
+    @apply font-medium text-primary underline decoration-dotted underline-offset-4;
   }
 
   .cn-editor .tiptap code {
@@ -183,8 +184,9 @@
     @apply bg-transparent p-0 text-zinc-50 dark:text-zinc-50;
   }
 
-  .cn-editor .tiptap pre ::selection {
-    @apply bg-primary/45 text-white;
+  .cn-editor .tiptap pre::selection,
+  .cn-editor .tiptap pre *::selection {
+    @apply bg-zinc-200 text-zinc-900;
   }
 
   .cn-editor .tiptap table {
@@ -201,10 +203,16 @@
   }
 
   .cn-editor .tiptap .selectedCell {
-    @apply relative bg-primary/15 text-foreground;
+    @apply text-foreground;
+    outline: 1px solid var(--ring);
   }
 
   .cn-editor .tiptap .selectedCell::after {
-    @apply absolute inset-0 bg-primary/10 content-[''];
+    content: none;
+  }
+
+  .cn-editor .tiptap .selectedCell::selection,
+  .cn-editor .tiptap .selectedCell *::selection {
+    @apply bg-accent text-foreground;
   }
 }

@@ -12,10 +12,15 @@ import TableCell from "@tiptap/extension-table-cell";
 import { Markdown } from "@tiptap/markdown";
 import {
   Bold,
+  Columns3,
   Check,
   ChevronDownIcon,
   Code,
+  Minus,
+  Plus,
   RemoveFormatting,
+  Rows3,
+  Table as TableIcon,
   Italic,
   Link as LinkIcon,
   Strikethrough,
@@ -99,8 +104,13 @@ export function Editor({
   ...props
 }: EditorProps) {
   const [showLinkInput, setShowLinkInput] = useState(false);
+  const [showTableActions, setShowTableActions] = useState(false);
+  const [showAltInput, setShowAltInput] = useState(false);
+  const [isInTable, setIsInTable] = useState(false);
+  const [isOnImage, setIsOnImage] = useState(false);
   const [linkUrl, setLinkUrl] = useState("");
-  const [sourceValue, setSourceValue] = useState("");
+  const [imageAltText, setImageAltText] = useState("");
+  const [sourceValue, setSourceValue] = useState(value);
   const bubbleMenuRef = useRef<HTMLDivElement>(null);
   const prevModeRef = useRef<EditorMode>(mode);
   const sourceDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -149,6 +159,11 @@ export function Editor({
   }, [editor, value, format]);
 
   useEffect(() => {
+    if (!isSourceMode) return;
+    setSourceValue(value || (format === "markdown" ? "" : "<p></p>"));
+  }, [isSourceMode, value, format]);
+
+  useEffect(() => {
     if (!editor) return;
     editor.setEditable(!disabled && !isSourceMode);
   }, [editor, disabled, isSourceMode]);
@@ -167,6 +182,8 @@ export function Editor({
           ? await onSwitchToSource(currentValue, format)
           : currentValue;
         setShowLinkInput(false);
+        setShowTableActions(false);
+        setShowAltInput(false);
         setSourceValue(sourceModeValue);
       };
       void enterSourceMode();
@@ -197,7 +214,7 @@ export function Editor({
   }, []);
 
   useEffect(() => {
-    if (!showLinkInput || !editor) return;
+    if ((!showLinkInput && !showTableActions && !showAltInput) || !editor) return;
 
     const onPointerDown = (event: PointerEvent) => {
       const target = event.target as Node | null;
@@ -206,6 +223,8 @@ export function Editor({
       const insideBubble = bubbleMenuRef.current?.contains(target) ?? false;
       if (!insideBubble) {
         setShowLinkInput(false);
+        setShowTableActions(false);
+        setShowAltInput(false);
       }
     };
 
@@ -213,7 +232,34 @@ export function Editor({
     return () => {
       document.removeEventListener("pointerdown", onPointerDown, true);
     };
-  }, [showLinkInput, editor]);
+  }, [showLinkInput, showTableActions, showAltInput, editor]);
+
+  useEffect(() => {
+    if (!editor) return;
+
+    const updateTableContext = () => {
+      const nextIsInTable =
+        editor.isActive("table") ||
+        editor.isActive("tableRow") ||
+        editor.isActive("tableHeader") ||
+        editor.isActive("tableCell");
+      const nextIsOnImage = editor.isActive("image");
+
+      setIsInTable(nextIsInTable);
+      if (!nextIsInTable) setShowTableActions(false);
+      setIsOnImage(nextIsOnImage);
+      if (!nextIsOnImage) setShowAltInput(false);
+    };
+
+    updateTableContext();
+    editor.on("selectionUpdate", updateTableContext);
+    editor.on("transaction", updateTableContext);
+
+    return () => {
+      editor.off("selectionUpdate", updateTableContext);
+      editor.off("transaction", updateTableContext);
+    };
+  }, [editor]);
 
   if (!editor) return null;
 
@@ -311,6 +357,28 @@ export function Editor({
     }
     setLinkUrl(editor.isActive("link") ? (editor.getAttributes("link").href as string) || "" : "");
     setShowLinkInput(true);
+    setShowTableActions(false);
+    setShowAltInput(false);
+  };
+
+  const toggleTableActions = () => {
+    if (!isInTable) return;
+    setShowTableActions((current) => !current);
+    setShowLinkInput(false);
+    setShowAltInput(false);
+  };
+
+  const toggleAltInput = () => {
+    if (!isOnImage) return;
+    if (showAltInput) {
+      setShowAltInput(false);
+      return;
+    }
+    const alt = editor.getAttributes("image").alt;
+    setImageAltText(typeof alt === "string" ? alt : "");
+    setShowAltInput(true);
+    setShowLinkInput(false);
+    setShowTableActions(false);
   };
 
   const applyLink = () => {
@@ -336,6 +404,30 @@ export function Editor({
     setShowLinkInput(false);
   };
 
+  const applyImageAlt = () => {
+    if (!isOnImage) return;
+    const trimmed = imageAltText.trim();
+    editor
+      .chain()
+      .focus()
+      .updateAttributes("image", {
+        alt: trimmed || null,
+      })
+      .run();
+    setShowAltInput(false);
+  };
+
+  const clearImageAlt = () => {
+    if (!isOnImage) return;
+    editor.chain().focus().updateAttributes("image", { alt: null }).run();
+    setImageAltText("");
+    setShowAltInput(false);
+  };
+
+  const addRow = () => editor.chain().focus().addRowAfter().run();
+  const removeRow = () => editor.chain().focus().deleteRow().run();
+  const addColumn = () => editor.chain().focus().addColumnAfter().run();
+  const removeColumn = () => editor.chain().focus().deleteColumn().run();
   const onSourceChange = (nextValue: string) => {
     setSourceValue(nextValue);
 
@@ -347,12 +439,12 @@ export function Editor({
   };
 
   const toolbarButtonClass =
-    "inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50";
+    "inline-flex size-7 items-center justify-center rounded-md transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50";
   const toolbarToggleButtonClass = `${toolbarButtonClass} aria-pressed:bg-accent aria-pressed:text-accent-foreground`;
-  const toolbarSelectClass =
-    "border-input bg-background text-foreground h-7 rounded-md border px-2 text-xs shadow-xs outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]";
+  const toolbarInputClass =
+    "border-input bg-background text-foreground h-7 rounded-md border px-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]";
   const sourceTextareaClass =
-    "border-input file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground dark:bg-input/30 min-h-16 w-full rounded-md border bg-transparent px-3 py-2 font-mono text-base shadow-xs transition-[color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm";
+    "border-input file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground dark:bg-input/30 min-h-16 w-full rounded-md border bg-transparent px-3 py-2 font-mono text-base shadow-xs transition-[color,box-shadow] outline-none [field-sizing:content] focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm";
 
   const renderIconButton = ({
     label,
@@ -376,18 +468,16 @@ export function Editor({
       <Icon className="size-4" />
     </button>
   );
-
   return (
     <div {...props}>
       <div>
         {isSourceMode ? (
           <div>
-            <label htmlFor="source-editor">Source ({format.toUpperCase()})</label>
             <textarea
               id="source-editor"
               value={sourceValue}
               onChange={(event) => onSourceChange(event.target.value)}
-              rows={12}
+              rows={1}
               disabled={disabled}
               className={sourceTextareaClass}
             />
@@ -408,7 +498,10 @@ export function Editor({
         shouldShow={({ editor: bubbleEditor, from, to, view, element }) => {
           const hasEditorFocus = view.hasFocus() || element.contains(document.activeElement);
           if (!hasEditorFocus) return false;
-          return !isSourceMode && (showLinkInput || (!bubbleEditor.state.selection.empty && from !== to));
+          return (
+            !isSourceMode &&
+            (showLinkInput || showTableActions || showAltInput || (!bubbleEditor.state.selection.empty && from !== to))
+          );
         }}
       >
         <div className="flex flex-col gap-1">
@@ -420,7 +513,7 @@ export function Editor({
                 onChange={(event) => setBlockType(event.target.value as BlockType)}
                 disabled={disabled}
                 aria-label="Block style"
-                className="h-7 w-full appearance-none rounded-md border border-transparent bg-transparent px-2 pr-8 text-sm shadow-none outline-none hover:bg-accent focus-visible:outline-none focus-visible:ring-0 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50"
+                className="h-7 w-full appearance-none rounded-md border border-transparent bg-transparent px-2 pr-5.5 text-sm shadow-none outline-none hover:bg-accent focus-visible:outline-none focus-visible:ring-0 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {blockOptions.map((option) => (
                   <option key={option.value} value={option.value}>
@@ -429,7 +522,7 @@ export function Editor({
                 ))}
               </select>
               <ChevronDownIcon
-                className="text-muted-foreground pointer-events-none absolute top-1/2 right-2 size-3.5 -translate-y-1/2 opacity-50"
+                className="text-muted-foreground pointer-events-none absolute top-1/2 right-1.5 size-3.5 -translate-y-1/2 opacity-50"
                 aria-hidden="true"
               />
             </div>
@@ -449,11 +542,37 @@ export function Editor({
               onClick: openLinkInput,
               disabled,
               toggle: true,
-              pressed: editor.isActive("link"),
+              pressed: showLinkInput || editor.isActive("link"),
             })}
+            {isOnImage ? (
+              <button
+                type="button"
+                aria-label="Image alt text"
+                title="Image alt text"
+                aria-pressed={showAltInput}
+                onClick={toggleAltInput}
+                disabled={disabled}
+                className={`${toolbarToggleButtonClass} w-auto px-2 text-xs font-medium`}
+              >
+                ALT
+              </button>
+            ) : null}
+            {isInTable
+              ? renderIconButton({
+                  label: "Table",
+                  icon: TableIcon,
+                  onClick: toggleTableActions,
+                  disabled,
+                  toggle: true,
+                  pressed: showTableActions,
+                })
+              : null}
           </div>
           {showLinkInput ? (
-            <div className="border-border bg-popover flex flex-nowrap items-center gap-0.5 overflow-x-auto rounded-md border p-1 shadow-sm whitespace-nowrap">
+            <div
+              data-state="open"
+              className="border-border bg-popover data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=open]:slide-in-from-top-1 flex flex-nowrap items-center gap-0.5 overflow-x-auto rounded-md border p-1 shadow-sm duration-200 whitespace-nowrap"
+            >
               <input
                 id="link-url"
                 type="url"
@@ -461,7 +580,7 @@ export function Editor({
                 value={linkUrl}
                 onChange={(event) => setLinkUrl(event.target.value)}
                 disabled={disabled}
-                className={`${toolbarSelectClass} min-w-56 flex-1`}
+                className={`${toolbarInputClass} min-w-56 flex-1`}
               />
               {renderIconButton({
                 label: "Set link",
@@ -475,6 +594,69 @@ export function Editor({
                 onClick: confirmOrRemoveLink,
                 disabled,
                 className: "ml-auto",
+              })}
+            </div>
+          ) : null}
+          {showAltInput && isOnImage ? (
+            <div
+              data-state="open"
+              className="border-border bg-popover data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=open]:slide-in-from-top-1 flex flex-nowrap items-center gap-0.5 overflow-x-auto rounded-md border p-1 shadow-sm duration-200 whitespace-nowrap"
+            >
+              <input
+                id="image-alt"
+                type="text"
+                placeholder="Describe image"
+                value={imageAltText}
+                onChange={(event) => setImageAltText(event.target.value)}
+                disabled={disabled}
+                className={`${toolbarInputClass} min-w-56 flex-1`}
+              />
+              {renderIconButton({
+                label: "Save alt text",
+                icon: Check,
+                onClick: applyImageAlt,
+                disabled,
+              })}
+              {renderIconButton({
+                label: "Remove alt text",
+                icon: X,
+                onClick: clearImageAlt,
+                disabled,
+                className: "ml-auto",
+              })}
+            </div>
+          ) : null}
+          {showTableActions && isInTable ? (
+            <div
+              data-state="open"
+              className="border-border bg-popover data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=open]:slide-in-from-top-1 inline-flex w-fit flex-nowrap items-center gap-1 overflow-x-auto self-end rounded-md border p-1 shadow-sm duration-200 whitespace-nowrap"
+            >
+              <span className="text-sm ml-1 text-muted-foreground">Rows:</span>
+              {renderIconButton({
+                label: "Add row",
+                icon: Plus,
+                onClick: addRow,
+                disabled,
+              })}
+              {renderIconButton({
+                label: "Remove row",
+                icon: Minus,
+                onClick: removeRow,
+                disabled,
+              })}
+              <span className="bg-border mx-0.5 h-4 w-px" aria-hidden="true" />
+              <span className="text-sm text-muted-foreground">Columns:</span>
+              {renderIconButton({
+                label: "Add column",
+                icon: Plus,
+                onClick: addColumn,
+                disabled,
+              })}
+              {renderIconButton({
+                label: "Remove column",
+                icon: Minus,
+                onClick: removeColumn,
+                disabled,
               })}
             </div>
           ) : null}

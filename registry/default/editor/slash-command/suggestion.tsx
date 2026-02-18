@@ -2,6 +2,7 @@ import { ReactRenderer } from "@tiptap/react";
 import type { Editor } from "@tiptap/core";
 import tippy, { type Instance as TippyInstance } from "tippy.js";
 import CommandsList, { type CommandsListHandle, type SlashItem } from "./commands-list";
+import { Code, Heading1, Heading2, Heading3, Image, List, ListOrdered, Pilcrow, Quote, Table } from "lucide-react";
 
 type SuggestionProps = {
   editor: Editor;
@@ -13,30 +14,37 @@ type SuggestionProps = {
 const allItems: SlashItem[] = [
   {
     title: "Text",
+    icon: Pilcrow,
     command: ({ editor, range }) => editor.chain().focus().deleteRange(range).setParagraph().run(),
   },
   {
     title: "Heading 1",
+    icon: Heading1,
     command: ({ editor, range }) => editor.chain().focus().deleteRange(range).setHeading({ level: 1 }).run(),
   },
   {
     title: "Heading 2",
+    icon: Heading2,
     command: ({ editor, range }) => editor.chain().focus().deleteRange(range).setHeading({ level: 2 }).run(),
   },
   {
     title: "Heading 3",
+    icon: Heading3,
     command: ({ editor, range }) => editor.chain().focus().deleteRange(range).setHeading({ level: 3 }).run(),
   },
   {
     title: "Bulleted list",
+    icon: List,
     command: ({ editor, range }) => editor.chain().focus().deleteRange(range).toggleBulletList().run(),
   },
   {
     title: "Numbered list",
+    icon: ListOrdered,
     command: ({ editor, range }) => editor.chain().focus().deleteRange(range).toggleOrderedList().run(),
   },
   {
     title: "Image",
+    icon: Image,
     command: ({ editor, range }) => {
       const src = window.prompt("Image URL");
       if (!src) return;
@@ -45,15 +53,18 @@ const allItems: SlashItem[] = [
   },
   {
     title: "Table",
+    icon: Table,
     command: ({ editor, range }) =>
       editor.chain().focus().deleteRange(range).insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run(),
   },
   {
     title: "Quote",
+    icon: Quote,
     command: ({ editor, range }) => editor.chain().focus().deleteRange(range).toggleBlockquote().run(),
   },
   {
     title: "Code block",
+    icon: Code,
     command: ({ editor, range }) => editor.chain().focus().deleteRange(range).toggleCodeBlock().run(),
   },
 ];
