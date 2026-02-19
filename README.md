@@ -1,31 +1,40 @@
 # Editor
 
-Format-aware TipTap editor component (`HTML` or `Markdown`) with BubbleMenu controls, slash commands, source mode, links, images, and tables.
+`Editor` is a format-aware TipTap component (`HTML` or `Markdown`) with:
+- Bubble menu formatting controls
+- Slash commands
+- Source mode
+- Links, images (including ALT editing), and tables
 
-Component name:
-- `Editor` (exported from `src/components/ui/editor.tsx`)
+Component export:
+- `Editor` from `src/components/ui/editor.tsx`
 
-## Local Demo
+## Local Development
 
 ```bash
 npm install
 npm run dev
 ```
 
-Build checks:
+Build:
 
 ```bash
-npx tsc --noEmit
 npm run build
+npm run registry:build
 ```
+
+`npm run build` now:
+- builds client assets
+- builds SSR entry
+- prerenders `/` into `dist/index.html`
 
 ## Styling Model
 
-- Uses shadcn-style Tailwind utility classes and token variables.
-- Does not depend on shadcn React wrapper components.
-- Demo token/base styles are in `src/globals.css`.
+- Uses shadcn-style Tailwind utility classes and semantic tokens.
+- Uses local shadcn component files where needed (`button`, `tabs`).
+- Demo/base styles live in `src/index.css`.
 
-## Registry Build (shadcn)
+## Registry
 
 Registry source:
 - `registry.json`
@@ -41,17 +50,89 @@ Generated files:
 - `public/r/registry.json`
 - `public/r/editor.json`
 
-## Consumer Install
+## Install In Another Project
 
-From a consumer app, install via registry item URL:
-
-```bash
-npx shadcn@latest add https://<your-host>/r/editor.json
-```
-
-For local testing, serve this repo and point to your local URL:
+Install this component directly from GitHub:
 
 ```bash
-npm run dev
-# then use the local /r/editor.json URL exposed by your server
+npx shadcn@latest add https://raw.githubusercontent.com/pages-cms/editor/main/public/r/editor.json
 ```
+
+## Basic Usage
+
+```tsx
+import { useState } from "react";
+import { Editor } from "@/components/ui/editor";
+
+export function Example() {
+  const [value, setValue] = useState("");
+
+  return (
+    <Editor
+      value={value}
+      onChange={setValue}
+    />
+  );
+}
+```
+
+Notes:
+- Default `format` is `"html"`.
+- `format` supports `"markdown"` and `"html"`.
+- `mode` supports `"wysiwyg"` and `"source"`.
+- `className` applies extra classes to the editor surface (WYSIWYG + source textarea).
+
+## Props
+
+| Prop | Type | Default | Description |
+| --- | --- | --- | --- |
+| `value` | `string` | `""` | Current editor content. |
+| `onChange` | `(value: string) => void` | - | Called whenever content changes. |
+| `format` | `"markdown" \| "html"` | `"html"` | Parsing and output format. |
+| `mode` | `"wysiwyg" \| "source"` | `"wysiwyg"` | Active editor mode. |
+| `disabled` | `boolean` | `false` | Disables editing and toolbar actions. |
+| `sourceDebounceMs` | `number` | `500` | Debounce for source text synchronization. |
+| `className` | `string` | - | Extra classes for the editor surface. |
+| `...props` | `HTMLAttributes<HTMLDivElement>` | - | Forwarded to the root container. |
+
+## Hooks
+
+| Hook | Type | When |
+| --- | --- | --- |
+| `onSwitchToSource` | `(value: string, format: "markdown" \| "html") => string \| Promise<string>` | Runs when switching to source mode. |
+| `onSwitchToEditor` | `(value: string, format: "markdown" \| "html") => string \| Promise<string>` | Runs when switching back to WYSIWYG mode. |
+
+## Optional Mode Switch
+
+```tsx
+import { useState } from "react";
+import { Editor } from "@/components/ui/editor";
+
+export function Example() {
+  const [mode, setMode] = useState<"wysiwyg" | "source">("wysiwyg");
+  const [value, setValue] = useState("");
+
+  return (
+    <>
+      <button type="button" onClick={() => setMode("wysiwyg")}>Editor</button>
+      <button type="button" onClick={() => setMode("source")}>Source</button>
+      <Editor
+        value={value}
+        onChange={setValue}
+        format="markdown"
+        mode={mode}
+      />
+    </>
+  );
+}
+```
+
+## Deploy (Cloudflare Pages)
+
+Use Git integration with these settings:
+- Framework preset: `None`
+- Root directory: `editor`
+- Build command: `npm run build`
+- Build output directory: `dist`
+
+This deploys the prerendered static HTML + hydrated React demo.

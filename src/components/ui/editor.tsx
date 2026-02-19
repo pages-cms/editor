@@ -28,6 +28,8 @@ import {
   X,
   type LucideIcon,
 } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 import SlashCommands from "./slash-command/commands";
 
 export type EditorFormat = "html" | "markdown";
@@ -40,9 +42,10 @@ type EditorProps = {
   format?: EditorFormat;
   mode?: EditorMode;
   sourceDebounceMs?: number;
+  className?: string;
   onSwitchToSource?: (value: string, format: EditorFormat) => string | Promise<string>;
   onSwitchToEditor?: (value: string, format: EditorFormat) => string | Promise<string>;
-} & Omit<HTMLAttributes<HTMLDivElement>, "onChange">;
+} & Omit<HTMLAttributes<HTMLDivElement>, "onChange" | "className">;
 
 type ToggleAction = {
   label: string;
@@ -99,6 +102,7 @@ export function Editor({
   format = "html",
   mode = "wysiwyg",
   sourceDebounceMs = 500,
+  className,
   onSwitchToSource,
   onSwitchToEditor,
   ...props
@@ -475,8 +479,6 @@ export function Editor({
   const toolbarToggleButtonClass = `${toolbarButtonClass} aria-pressed:bg-accent aria-pressed:text-accent-foreground`;
   const toolbarInputClass =
     "border-input bg-background text-foreground h-7 rounded-md border px-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]";
-  const sourceTextareaClass =
-    "border-input file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground dark:bg-input/30 min-h-16 w-full rounded-md border bg-transparent px-3 py-2 font-mono text-base shadow-xs transition-[color,box-shadow] outline-none [field-sizing:content] focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm";
 
   const renderIconButton = ({
     label,
@@ -505,13 +507,13 @@ export function Editor({
       <div>
         {isSourceMode ? (
           <div>
-            <textarea
+            <Textarea
               id="source-editor"
               value={sourceValue}
               onChange={(event) => onSourceChange(event.target.value)}
               rows={1}
               disabled={disabled}
-              className={sourceTextareaClass}
+              className={cn("font-mono", className)}
             />
           </div>
         ) : null}
@@ -694,7 +696,7 @@ export function Editor({
           ) : null}
         </div>
       </BubbleMenu>
-      {!isSourceMode ? <EditorContent editor={editor} className="cn-editor" /> : null}
+      {!isSourceMode ? <EditorContent editor={editor} className={cn("cn-editor", className)} /> : null}
     </div>
   );
 }

@@ -8,6 +8,7 @@
       "type": "registry:component",
       "title": "Editor",
       "description": "A format-aware HTML/Markdown editor built on TipTap.",
+      "registryDependencies": ["textarea"],
       "dependencies": [
         "lucide-react",
         "@tiptap/core",
