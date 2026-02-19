@@ -29,7 +29,7 @@
         {
           "path": "registry/default/editor/editor.tsx",
           "type": "registry:component",
-          "target": "components/ui/page-editor.tsx"
+          "target": "components/ui/page-editor/editor.tsx"
         },
         {
           "path": "registry/default/editor/slash-command/commands.ts",
