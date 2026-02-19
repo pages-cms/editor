@@ -488,9 +488,27 @@ export function Example() {
                     <code className={inlineCodeClass}>string</code>
                   </td>
                   <td className="p-2 align-top">-</td>
+                  <td className="p-2 align-top">Extra classes for the root wrapper.</td>
+                </tr>
+                <tr className="border-b">
                   <td className="p-2 align-top">
-                    Extra classes for the editor surface (WYSIWYG and source textarea).
+                    <code className={inlineCodeClass}>editorClassName</code>
                   </td>
+                  <td className="p-2 align-top">
+                    <code className={inlineCodeClass}>string</code>
+                  </td>
+                  <td className="p-2 align-top">-</td>
+                  <td className="p-2 align-top">Extra classes for the WYSIWYG surface.</td>
+                </tr>
+                <tr className="border-b">
+                  <td className="p-2 align-top">
+                    <code className={inlineCodeClass}>sourceClassName</code>
+                  </td>
+                  <td className="p-2 align-top">
+                    <code className={inlineCodeClass}>string</code>
+                  </td>
+                  <td className="p-2 align-top">-</td>
+                  <td className="p-2 align-top">Extra classes for the source textarea.</td>
                 </tr>
                 <tr className="border-b">
                   <td className="p-2 align-top">

@@ -80,7 +80,9 @@ Notes:
 - Default `format` is `"html"`.
 - `format` supports `"markdown"` and `"html"`.
 - `mode` supports `"wysiwyg"` and `"source"`.
-- `className` applies extra classes to the editor surface (WYSIWYG + source textarea).
+- `className` applies classes to the root wrapper (`cn-editor`).
+- `editorClassName` applies classes to the WYSIWYG surface only.
+- `sourceClassName` applies classes to the source textarea only.
 
 ## Props
 
@@ -92,7 +94,9 @@ Notes:
 | `mode` | `"wysiwyg" \| "source"` | `"wysiwyg"` | Active editor mode. |
 | `disabled` | `boolean` | `false` | Disables editing and toolbar actions. |
 | `sourceDebounceMs` | `number` | `500` | Debounce for source text synchronization. |
-| `className` | `string` | - | Extra classes for the editor surface. |
+| `className` | `string` | - | Extra classes for the root wrapper (`cn-editor`). |
+| `editorClassName` | `string` | - | Extra classes for the WYSIWYG surface. |
+| `sourceClassName` | `string` | - | Extra classes for the source textarea. |
 | `...props` | `HTMLAttributes<HTMLDivElement>` | - | Forwarded to the root container. |
 
 ## Hooks

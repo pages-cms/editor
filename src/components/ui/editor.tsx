@@ -43,6 +43,8 @@ type EditorProps = {
   mode?: EditorMode;
   sourceDebounceMs?: number;
   className?: string;
+  editorClassName?: string;
+  sourceClassName?: string;
   onSwitchToSource?: (value: string, format: EditorFormat) => string | Promise<string>;
   onSwitchToEditor?: (value: string, format: EditorFormat) => string | Promise<string>;
 } & Omit<HTMLAttributes<HTMLDivElement>, "onChange" | "className">;
@@ -103,6 +105,8 @@ export function Editor({
   mode = "wysiwyg",
   sourceDebounceMs = 500,
   className,
+  editorClassName,
+  sourceClassName,
   onSwitchToSource,
   onSwitchToEditor,
   ...props
@@ -119,6 +123,10 @@ export function Editor({
   const prevModeRef = useRef<EditorMode>(mode);
   const sourceDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isSourceMode = mode === "source";
+  const tiptapSurfaceClass = cn(
+    "border-input placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground dark:bg-input/30 min-h-16 w-full rounded-md border bg-transparent px-3 py-2 text-base shadow-xs transition-[color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] md:text-sm",
+    editorClassName,
+  );
 
   const editor = useEditor({
     extensions: [
@@ -144,6 +152,11 @@ export function Editor({
       SlashCommands,
     ],
     content: value || (format === "markdown" ? "" : "<p></p>"),
+    editorProps: {
+      attributes: {
+        class: tiptapSurfaceClass,
+      },
+    },
     editable: !disabled,
     immediatelyRender: false,
     onUpdate: ({ editor: nextEditor }) => {
@@ -214,6 +227,17 @@ export function Editor({
     if (!editor) return;
     editor.setEditable(!disabled && !isSourceMode);
   }, [editor, disabled, isSourceMode]);
+
+  useEffect(() => {
+    if (!editor) return;
+    editor.setOptions({
+      editorProps: {
+        attributes: {
+          class: tiptapSurfaceClass,
+        },
+      },
+    });
+  }, [editor, tiptapSurfaceClass]);
 
   useEffect(() => {
     if (!editor) return;
@@ -503,7 +527,7 @@ export function Editor({
     </button>
   );
   return (
-    <div {...props}>
+    <div {...props} className={cn("cn-editor", className)}>
       <div>
         {isSourceMode ? (
           <div>
@@ -513,7 +537,7 @@ export function Editor({
               onChange={(event) => onSourceChange(event.target.value)}
               rows={1}
               disabled={disabled}
-              className={cn("font-mono", className)}
+              className={cn("font-mono", sourceClassName)}
             />
           </div>
         ) : null}
@@ -696,7 +720,7 @@ export function Editor({
           ) : null}
         </div>
       </BubbleMenu>
-      {!isSourceMode ? <EditorContent editor={editor} className={cn("cn-editor", className)} /> : null}
+      {!isSourceMode ? <EditorContent editor={editor} /> : null}
     </div>
   );
 }
