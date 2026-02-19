@@ -320,7 +320,7 @@ export default function App() {
           <HighlightedCode
             dark={resolvedIsDark}
             lang="bash"
-            code={"npx shadcn@latest add https://raw.githubusercontent.com/pages-cms/editor/main/public/r/editor.json"}
+            code={"npx shadcn@latest add https://editor.pagescms.org/r/editor.json"}
           />
 
           <h3 className="font-heading mt-12 scroll-m-28 text-lg font-medium tracking-tight [&+p]:mt-4! *:[code]:text-xl">

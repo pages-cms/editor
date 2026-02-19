@@ -55,7 +55,7 @@ Generated files:
 Install this component directly from GitHub:
 
 ```bash
-npx shadcn@latest add https://raw.githubusercontent.com/pages-cms/editor/main/public/r/editor.json
+npx shadcn@latest add https://editor.pagescms.org/r/editor.json
 ```
 
 ## Basic Usage
