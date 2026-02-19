@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://pages-cms.github.io/editor/sitemap.xml
+Sitemap: https://editor.pagescms.org/sitemap.xml
