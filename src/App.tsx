@@ -6,7 +6,7 @@ import { Button } from "./components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./components/ui/tooltip";
 
-const THEME_STORAGE_KEY = "page-editor-theme";
+const THEME_STORAGE_KEY = "pages-editor-theme";
 const COPY_FEEDBACK_MS = 1500;
 const DEFAULT_EDITOR_CONTENT_CSS = `.cn-editor .tiptap > :first-child {
   margin-top: 0;
@@ -281,7 +281,7 @@ export default function App() {
               </Button>
             </div>
           </header>
-          <h1 className="mt-8 scroll-m-24 text-3xl font-semibold tracking-tight sm:text-3xl">Page Editor</h1>
+          <h1 className="mt-8 scroll-m-24 text-3xl font-semibold tracking-tight sm:text-3xl">Pages Editor</h1>
           <p className="text-[1.05rem] sm:text-base sm:text-balance md:max-w-[80%] text-muted-foreground">
             A simple, Notion-like WYSIWYG editor component for shadcn/ui. Built with TipTap, ProseMirror, and React.
           </p>
