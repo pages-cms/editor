@@ -29,22 +29,22 @@
         {
           "path": "registry/default/editor/editor.tsx",
           "type": "registry:component",
-          "target": "components/ui/page-editor/editor.tsx"
+          "target": "components/ui/editor/index.tsx"
         },
         {
           "path": "registry/default/editor/slash-command/commands.ts",
           "type": "registry:component",
-          "target": "components/ui/page-editor/slash-command/commands.ts"
+          "target": "components/ui/editor/slash-command/commands.ts"
         },
         {
           "path": "registry/default/editor/slash-command/commands-list.tsx",
           "type": "registry:component",
-          "target": "components/ui/page-editor/slash-command/commands-list.tsx"
+          "target": "components/ui/editor/slash-command/commands-list.tsx"
         },
         {
           "path": "registry/default/editor/slash-command/suggestion.tsx",
           "type": "registry:component",
-          "target": "components/ui/page-editor/slash-command/suggestion.tsx"
+          "target": "components/ui/editor/slash-command/suggestion.tsx"
         }
       ]
     }
