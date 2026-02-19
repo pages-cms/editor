@@ -1,4 +1,4 @@
-import { Check, Copy, Github, Moon, Sun } from "lucide-react";
+import { ArrowUpRight, Check, Copy, Github, Moon, Sun } from "lucide-react";
 import { useEffect, useState } from "react";
 import { codeToHtml, type BundledLanguage } from "shiki";
 import { type EditorMode, Editor } from "./components/ui/editor";
@@ -252,13 +252,16 @@ export default function App() {
   return (
     <TooltipProvider>
       <main className="min-h-screen text-sm">
-      <div className="mx-auto flex w-full max-w-3xl flex-col gap-12 px-4 py-12 md:px-6">
+      <div className="mx-auto flex w-full max-w-3xl flex-col gap-12 px-4 py-8 md:px-6">
         <section className="space-y-2">
-          <div className="flex flex-wrap items-start gap-2">
-            <h1 className="order-2 w-full scroll-m-24 text-3xl font-semibold tracking-tight sm:text-3xl md:order-1 md:w-auto">
-              Page Editor
-            </h1>
-            <div className="order-1 ml-auto flex items-center gap-2 md:order-2">
+          <header className="flex items-center justify-between">
+            <Button asChild variant="secondary" size="sm">
+              <a href="https://pagescms.org" target="_blank" rel="noreferrer">
+                Pages CMS
+                <ArrowUpRight className="size-4" />
+              </a>
+            </Button>
+            <div className="flex items-center gap-2">
               <Button asChild variant="secondary" size="sm">
                 <a href="https://github.com/pages-cms/editor" target="_blank" rel="noreferrer">
                   <Github className="size-4" />
@@ -277,7 +280,8 @@ export default function App() {
                 <ThemeIcon className="size-4" />
               </Button>
             </div>
-          </div>
+          </header>
+          <h1 className="mt-8 scroll-m-24 text-3xl font-semibold tracking-tight sm:text-3xl">Page Editor</h1>
           <p className="text-[1.05rem] sm:text-base sm:text-balance md:max-w-[80%] text-muted-foreground">
             A simple, Notion-like WYSIWYG editor component for shadcn/ui. Built with TipTap, ProseMirror, and React.
           </p>
