@@ -28,25 +28,18 @@ import {
   X,
   type LucideIcon,
 } from "lucide-react";
-import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import SlashCommands from "./slash-command/commands";
 
 export type EditorFormat = "html" | "markdown";
-export type EditorMode = "wysiwyg" | "source";
 
 type EditorProps = {
   value?: string;
   onChange?: (value: string) => void;
   disabled?: boolean;
   format?: EditorFormat;
-  mode?: EditorMode;
-  sourceDebounceMs?: number;
   className?: string;
   editorClassName?: string;
-  sourceClassName?: string;
-  onSwitchToSource?: (value: string, format: EditorFormat) => string | Promise<string>;
-  onSwitchToEditor?: (value: string, format: EditorFormat) => string | Promise<string>;
 } & Omit<HTMLAttributes<HTMLDivElement>, "onChange" | "className">;
 
 type ToggleAction = {
@@ -102,13 +95,8 @@ export function Editor({
   onChange = () => undefined,
   disabled = false,
   format = "html",
-  mode = "wysiwyg",
-  sourceDebounceMs = 500,
   className,
   editorClassName,
-  sourceClassName,
-  onSwitchToSource,
-  onSwitchToEditor,
   ...props
 }: EditorProps) {
   const [showLinkInput, setShowLinkInput] = useState(false);
@@ -118,11 +106,8 @@ export function Editor({
   const [isOnImage, setIsOnImage] = useState(false);
   const [linkUrl, setLinkUrl] = useState("");
   const [imageAltText, setImageAltText] = useState("");
-  const [sourceValue, setSourceValue] = useState(value);
   const bubbleMenuRef = useRef<HTMLDivElement>(null);
-  const prevModeRef = useRef<EditorMode>(mode);
-  const sourceDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const isSourceMode = mode === "source";
+  const linkInputRef = useRef<HTMLInputElement>(null);
   const tiptapSurfaceClass = cn(
     "border-input placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground dark:bg-input/30 min-h-16 w-full rounded-md border bg-transparent px-3 py-2 text-base shadow-xs transition-[color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] md:text-sm",
     editorClassName,
@@ -219,14 +204,9 @@ export function Editor({
   }, [editor, value, format]);
 
   useEffect(() => {
-    if (!isSourceMode) return;
-    setSourceValue(value || (format === "markdown" ? "" : "<p></p>"));
-  }, [isSourceMode, value, format]);
-
-  useEffect(() => {
     if (!editor) return;
-    editor.setEditable(!disabled && !isSourceMode);
-  }, [editor, disabled, isSourceMode]);
+    editor.setEditable(!disabled);
+  }, [editor, disabled]);
 
   useEffect(() => {
     if (!editor) return;
@@ -238,51 +218,6 @@ export function Editor({
       },
     });
   }, [editor, tiptapSurfaceClass]);
-
-  useEffect(() => {
-    if (!editor) return;
-
-    const wasSource = prevModeRef.current === "source";
-    const nowSource = mode === "source";
-    prevModeRef.current = mode;
-
-    if (!wasSource && nowSource) {
-      const enterSourceMode = async () => {
-        const currentValue = format === "markdown" ? editor.getMarkdown() : editor.getHTML();
-        const sourceModeValue = onSwitchToSource
-          ? await onSwitchToSource(currentValue, format)
-          : currentValue;
-        setShowLinkInput(false);
-        setShowTableActions(false);
-        setShowAltInput(false);
-        setSourceValue(sourceModeValue);
-      };
-      void enterSourceMode();
-    }
-
-    if (wasSource && !nowSource) {
-      const exitSourceMode = async () => {
-        if (sourceDebounceRef.current) {
-          clearTimeout(sourceDebounceRef.current);
-          sourceDebounceRef.current = null;
-        }
-
-        const editorModeValue = onSwitchToEditor
-          ? await onSwitchToEditor(sourceValue, format)
-          : sourceValue;
-
-        if (editorModeValue !== sourceValue) setSourceValue(editorModeValue);
-        editor.commands.setContent(editorModeValue, { contentType: format });
-      };
-      void exitSourceMode();
-    }
-  }, [editor, mode, format, onSwitchToSource, onSwitchToEditor, sourceValue]);
-
-  useEffect(() => {
-    return () => {
-      if (sourceDebounceRef.current) clearTimeout(sourceDebounceRef.current);
-    };
-  }, []);
 
   useEffect(() => {
     if ((!showLinkInput && !showTableActions && !showAltInput) || !editor) return;
@@ -304,6 +239,15 @@ export function Editor({
       document.removeEventListener("pointerdown", onPointerDown, true);
     };
   }, [showLinkInput, showTableActions, showAltInput, editor]);
+
+  useEffect(() => {
+    if (!showLinkInput) return;
+    const frameId = requestAnimationFrame(() => {
+      linkInputRef.current?.focus();
+      linkInputRef.current?.select();
+    });
+    return () => cancelAnimationFrame(frameId);
+  }, [showLinkInput]);
 
   useEffect(() => {
     if (!editor) return;
@@ -488,15 +432,6 @@ export function Editor({
   const removeRow = () => editor.chain().focus().deleteRow().run();
   const addColumn = () => editor.chain().focus().addColumnAfter().run();
   const removeColumn = () => editor.chain().focus().deleteColumn().run();
-  const onSourceChange = (nextValue: string) => {
-    setSourceValue(nextValue);
-
-    if (sourceDebounceRef.current) clearTimeout(sourceDebounceRef.current);
-    sourceDebounceRef.current = setTimeout(() => {
-      editor.commands.setContent(nextValue, { contentType: format });
-      sourceDebounceRef.current = null;
-    }, sourceDebounceMs);
-  };
 
   const toolbarButtonClass =
     "inline-flex size-7 items-center justify-center rounded-md transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50";
@@ -528,20 +463,6 @@ export function Editor({
   );
   return (
     <div {...props} className={cn("cn-editor", className)}>
-      <div>
-        {isSourceMode ? (
-          <div>
-            <Textarea
-              id="source-editor"
-              value={sourceValue}
-              onChange={(event) => onSourceChange(event.target.value)}
-              rows={1}
-              disabled={disabled}
-              className={cn("font-mono", sourceClassName)}
-            />
-          </div>
-        ) : null}
-      </div>
       <BubbleMenu
         pluginKey="editor-bubble"
         ref={bubbleMenuRef}
@@ -556,10 +477,7 @@ export function Editor({
         shouldShow={({ editor: bubbleEditor, from, to, view, element }) => {
           const hasEditorFocus = view.hasFocus() || element.contains(document.activeElement);
           if (!hasEditorFocus) return false;
-          return (
-            !isSourceMode &&
-            (showLinkInput || showTableActions || showAltInput || (!bubbleEditor.state.selection.empty && from !== to))
-          );
+          return showLinkInput || showTableActions || showAltInput || (!bubbleEditor.state.selection.empty && from !== to);
         }}
       >
         <div className="flex flex-col gap-1">
@@ -633,10 +551,17 @@ export function Editor({
             >
               <input
                 id="link-url"
+                ref={linkInputRef}
                 type="url"
                 placeholder="https://example.com"
                 value={linkUrl}
                 onChange={(event) => setLinkUrl(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    applyLink();
+                  }
+                }}
                 disabled={disabled}
                 className={`${toolbarInputClass} min-w-56 flex-1`}
               />
@@ -720,7 +645,7 @@ export function Editor({
           ) : null}
         </div>
       </BubbleMenu>
-      {!isSourceMode ? <EditorContent editor={editor} /> : null}
+      <EditorContent editor={editor} />
     </div>
   );
 }

@@ -1,9 +1,10 @@
 import { ArrowUpRight, Check, Copy, Github, Moon, Sun } from "lucide-react";
 import { useEffect, useState } from "react";
 import { codeToHtml, type BundledLanguage } from "shiki";
-import { type EditorMode, Editor } from "./components/ui/editor";
+import { Editor } from "./components/ui/editor";
 import { Button } from "./components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./components/ui/tabs";
+import { Textarea } from "./components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./components/ui/tooltip";
 
 const THEME_STORAGE_KEY = "pages-editor-theme";
@@ -136,6 +137,7 @@ export function hello(name: string) {
 `;
 
 type ThemePreference = "light" | "dark" | null;
+type DemoView = "editor" | "source";
 
 type HighlightedCodeProps = {
   code: string;
@@ -214,8 +216,8 @@ export default function App() {
   const inlineCodeClass =
     "bg-muted relative rounded-md px-[0.3rem] py-[0.2rem] font-mono text-[0.8rem] break-words outline-none";
   const textLinkClass = "font-medium underline underline-offset-4";
-  const [mode, setMode] = useState<EditorMode>("wysiwyg");
   const [markdownValue, setMarkdownValue] = useState<string>(INITIAL_MARKDOWN_VALUE);
+  const [demoView, setDemoView] = useState<DemoView>("editor");
   const [themePreference, setThemePreference] = useState<ThemePreference>(null);
   const [prefersDark, setPrefersDark] = useState(false);
 
@@ -292,16 +294,20 @@ export default function App() {
             Demo
           </h2>
 
-          <Tabs value={mode} onValueChange={(value) => setMode(value as EditorMode)} className="w-full">
+          <Tabs value={demoView} onValueChange={(value) => setDemoView(value as DemoView)} className="w-full">
             <TabsList>
-              <TabsTrigger value="wysiwyg">Editor</TabsTrigger>
+              <TabsTrigger value="editor">Editor</TabsTrigger>
               <TabsTrigger value="source">Source</TabsTrigger>
             </TabsList>
-            <TabsContent value="wysiwyg">
-              <Editor value={markdownValue} onChange={setMarkdownValue} format="markdown" mode="wysiwyg" />
+            <TabsContent value="editor">
+              <Editor value={markdownValue} onChange={setMarkdownValue} format="markdown" />
             </TabsContent>
             <TabsContent value="source">
-              <Editor value={markdownValue} onChange={setMarkdownValue} format="markdown" mode="source" />
+              <Textarea
+                value={markdownValue}
+                onChange={(event) => setMarkdownValue(event.target.value)}
+                className="min-h-64 font-mono"
+              />
             </TabsContent>
           </Tabs>
         </section>
@@ -353,32 +359,43 @@ export function Example() {
           </p>
 
           <h3 className="font-heading mt-12 scroll-m-28 text-lg font-medium tracking-tight [&+p]:mt-4! *:[code]:text-xl">
-            Optional Mode Switch
+            Implement Your Own Source Toggle
           </h3>
           <p className="leading-relaxed [&:not(:first-child)]:mt-6">
-            If you want source mode, control <code className={inlineCodeClass}>mode</code> from your own UI.
+            Keep one shared <code className={inlineCodeClass}>value</code> state and switch between{" "}
+            <code className={inlineCodeClass}>Editor</code> and your own source input. This keeps source-mode logic in
+            your app, while the component stays focused on rich-text editing.
           </p>
           <HighlightedCode
             dark={resolvedIsDark}
             lang="tsx"
             code={`import { useState } from "react"
 import { Editor } from "@/components/ui/editor"
+import { Textarea } from "@/components/ui/textarea"
 
-export function Example() {
-  const [mode, setMode] = useState<"wysiwyg" | "source">("wysiwyg")
+type View = "editor" | "source"
+
+export function EditorWithSourceToggle() {
+  const [view, setView] = useState<View>("editor")
   const [value, setValue] = useState("")
 
   return (
-    <>
-      <button type="button" onClick={() => setMode("wysiwyg")}>Editor</button>
-      <button type="button" onClick={() => setMode("source")}>Source</button>
-      <Editor
-        value={value}
-        onChange={setValue}
-        format="markdown"
-        mode={mode}
-      />
-    </>
+    <div className="space-y-3">
+      <div className="flex gap-2">
+        <button type="button" onClick={() => setView("editor")}>Editor</button>
+        <button type="button" onClick={() => setView("source")}>Source</button>
+      </div>
+
+      {view === "editor" ? (
+        <Editor value={value} onChange={setValue} format="markdown" />
+      ) : (
+        <Textarea
+          value={value}
+          onChange={(event) => setValue(event.target.value)}
+          className="min-h-64 font-mono"
+        />
+      )}
+    </div>
   )
 }`}
           />
@@ -397,7 +414,7 @@ export function Example() {
           </h3>
           <p className="leading-relaxed [&:not(:first-child)]:mt-6">
             <code className={inlineCodeClass}>Editor</code> is a controlled component. The props below define content
-            format, mode, and source synchronization behavior.
+            format and presentation behavior.
           </p>
           <div className="my-6 w-full overflow-x-auto">
             <table className="w-full text-sm">
@@ -446,18 +463,6 @@ export function Example() {
                 </tr>
                 <tr className="border-b">
                   <td className="p-2 align-top">
-                    <code className={inlineCodeClass}>mode</code>
-                  </td>
-                  <td className="p-2 align-top">
-                    <code className={inlineCodeClass}>"wysiwyg" | "source"</code>
-                  </td>
-                  <td className="p-2 align-top">
-                    <code className={inlineCodeClass}>"wysiwyg"</code>
-                  </td>
-                  <td className="p-2 align-top">Active editor mode.</td>
-                </tr>
-                <tr className="border-b">
-                  <td className="p-2 align-top">
                     <code className={inlineCodeClass}>disabled</code>
                   </td>
                   <td className="p-2 align-top">
@@ -467,18 +472,6 @@ export function Example() {
                     <code className={inlineCodeClass}>false</code>
                   </td>
                   <td className="p-2 align-top">Disables editing and toolbar actions.</td>
-                </tr>
-                <tr className="border-b">
-                  <td className="p-2 align-top">
-                    <code className={inlineCodeClass}>sourceDebounceMs</code>
-                  </td>
-                  <td className="p-2 align-top">
-                    <code className={inlineCodeClass}>number</code>
-                  </td>
-                  <td className="p-2 align-top">
-                    <code className={inlineCodeClass}>500</code>
-                  </td>
-                  <td className="p-2 align-top">Debounce for source text sync.</td>
                 </tr>
                 <tr className="border-b">
                   <td className="p-2 align-top">
@@ -502,16 +495,6 @@ export function Example() {
                 </tr>
                 <tr className="border-b">
                   <td className="p-2 align-top">
-                    <code className={inlineCodeClass}>sourceClassName</code>
-                  </td>
-                  <td className="p-2 align-top">
-                    <code className={inlineCodeClass}>string</code>
-                  </td>
-                  <td className="p-2 align-top">-</td>
-                  <td className="p-2 align-top">Extra classes for the source textarea.</td>
-                </tr>
-                <tr className="border-b">
-                  <td className="p-2 align-top">
                     <code className={inlineCodeClass}>...props</code>
                   </td>
                   <td className="p-2 align-top">
@@ -519,51 +502,6 @@ export function Example() {
                   </td>
                   <td className="p-2 align-top">-</td>
                   <td className="p-2 align-top">Forwarded to the root container.</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          <h3 className="font-heading mt-12 scroll-m-28 text-lg font-medium tracking-tight [&+p]:mt-4! *:[code]:text-xl">
-            Hooks
-          </h3>
-          <p className="leading-relaxed [&:not(:first-child)]:mt-6">
-            Use these hooks when you need to transform content during mode transitions.
-          </p>
-          <div className="my-6 w-full overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b">
-                  <th className="h-10 px-2 text-left font-medium">Hook</th>
-                  <th className="h-10 px-2 text-left font-medium">Type</th>
-                  <th className="h-10 px-2 text-left font-medium">When it runs</th>
-                  <th className="h-10 px-2 text-left font-medium">Return</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr className="border-b">
-                  <td className="p-2 align-top">
-                    <code className={inlineCodeClass}>onSwitchToSource</code>
-                  </td>
-                  <td className="p-2 align-top">
-                    <code className={inlineCodeClass}>
-                      (value: string, format: "markdown" | "html") =&gt; string | Promise&lt;string&gt;
-                    </code>
-                  </td>
-                  <td className="p-2 align-top">When switching from WYSIWYG to source mode.</td>
-                  <td className="p-2 align-top">Transformed source content.</td>
-                </tr>
-                <tr className="border-b">
-                  <td className="p-2 align-top">
-                    <code className={inlineCodeClass}>onSwitchToEditor</code>
-                  </td>
-                  <td className="p-2 align-top">
-                    <code className={inlineCodeClass}>
-                      (value: string, format: "markdown" | "html") =&gt; string | Promise&lt;string&gt;
-                    </code>
-                  </td>
-                  <td className="p-2 align-top">When switching from source mode back to WYSIWYG.</td>
-                  <td className="p-2 align-top">Transformed editor content.</td>
                 </tr>
               </tbody>
             </table>

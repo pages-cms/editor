@@ -3,7 +3,6 @@
 `Editor` is a format-aware TipTap component (`HTML` or `Markdown`) with:
 - Bubble menu formatting controls
 - Slash commands
-- Source mode
 - Links, images (including ALT editing), and tables
 
 Component export:
@@ -79,10 +78,48 @@ export function Example() {
 Notes:
 - Default `format` is `"html"`.
 - `format` supports `"markdown"` and `"html"`.
-- `mode` supports `"wysiwyg"` and `"source"`.
 - `className` applies classes to the root wrapper (`cn-editor`).
 - `editorClassName` applies classes to the WYSIWYG surface only.
-- `sourceClassName` applies classes to the source textarea only.
+
+## Implement Your Own Source Toggle
+
+`Editor` is intentionally focused on rich-text editing. If you need a source view, keep a single shared `value` state and switch between `Editor` and your own text input.
+
+```tsx
+import { useState } from "react";
+import { Editor } from "@/components/ui/editor";
+import { Textarea } from "@/components/ui/textarea";
+
+type View = "editor" | "source";
+
+export function EditorWithSourceToggle() {
+  const [view, setView] = useState<View>("editor");
+  const [value, setValue] = useState("");
+
+  return (
+    <div className="space-y-3">
+      <div className="flex gap-2">
+        <button type="button" onClick={() => setView("editor")}>Editor</button>
+        <button type="button" onClick={() => setView("source")}>Source</button>
+      </div>
+
+      {view === "editor" ? (
+        <Editor
+          value={value}
+          onChange={setValue}
+          format="markdown"
+        />
+      ) : (
+        <Textarea
+          value={value}
+          onChange={(event) => setValue(event.target.value)}
+          className="min-h-64 font-mono"
+        />
+      )}
+    </div>
+  );
+}
+```
 
 ## Props
 
@@ -91,45 +128,10 @@ Notes:
 | `value` | `string` | `""` | Current editor content. |
 | `onChange` | `(value: string) => void` | - | Called whenever content changes. |
 | `format` | `"markdown" \| "html"` | `"html"` | Parsing and output format. |
-| `mode` | `"wysiwyg" \| "source"` | `"wysiwyg"` | Active editor mode. |
 | `disabled` | `boolean` | `false` | Disables editing and toolbar actions. |
-| `sourceDebounceMs` | `number` | `500` | Debounce for source text synchronization. |
 | `className` | `string` | - | Extra classes for the root wrapper (`cn-editor`). |
 | `editorClassName` | `string` | - | Extra classes for the WYSIWYG surface. |
-| `sourceClassName` | `string` | - | Extra classes for the source textarea. |
 | `...props` | `HTMLAttributes<HTMLDivElement>` | - | Forwarded to the root container. |
-
-## Hooks
-
-| Hook | Type | When |
-| --- | --- | --- |
-| `onSwitchToSource` | `(value: string, format: "markdown" \| "html") => string \| Promise<string>` | Runs when switching to source mode. |
-| `onSwitchToEditor` | `(value: string, format: "markdown" \| "html") => string \| Promise<string>` | Runs when switching back to WYSIWYG mode. |
-
-## Optional Mode Switch
-
-```tsx
-import { useState } from "react";
-import { Editor } from "@/components/ui/editor";
-
-export function Example() {
-  const [mode, setMode] = useState<"wysiwyg" | "source">("wysiwyg");
-  const [value, setValue] = useState("");
-
-  return (
-    <>
-      <button type="button" onClick={() => setMode("wysiwyg")}>Editor</button>
-      <button type="button" onClick={() => setMode("source")}>Source</button>
-      <Editor
-        value={value}
-        onChange={setValue}
-        format="markdown"
-        mode={mode}
-      />
-    </>
-  );
-}
-```
 
 ## Deploy (Cloudflare Pages)
 
