@@ -19,9 +19,6 @@
     "@tiptap/suggestion",
     "tippy.js"
   ],
-  "registryDependencies": [
-    "textarea"
-  ],
   "files": [
     {
       "path": "registry/default/editor/editor.tsx",

@@ -88,6 +88,7 @@ Notes:
 ```tsx
 import { useState } from "react";
 import { Editor } from "@/components/ui/editor";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 
 type View = "editor" | "source";
@@ -97,26 +98,26 @@ export function EditorWithSourceToggle() {
   const [value, setValue] = useState("");
 
   return (
-    <div className="space-y-3">
-      <div className="flex gap-2">
-        <button type="button" onClick={() => setView("editor")}>Editor</button>
-        <button type="button" onClick={() => setView("source")}>Source</button>
-      </div>
-
-      {view === "editor" ? (
+    <Tabs value={view} onValueChange={(next) => setView(next as View)} className="w-full">
+      <TabsList>
+        <TabsTrigger value="editor">Editor</TabsTrigger>
+        <TabsTrigger value="source">Source</TabsTrigger>
+      </TabsList>
+      <TabsContent value="editor">
         <Editor
           value={value}
           onChange={setValue}
           format="markdown"
         />
-      ) : (
+      </TabsContent>
+      <TabsContent value="source">
         <Textarea
           value={value}
           onChange={(event) => setValue(event.target.value)}
           className="min-h-64 font-mono"
         />
-      )}
-    </div>
+      </TabsContent>
+    </Tabs>
   );
 }
 ```
