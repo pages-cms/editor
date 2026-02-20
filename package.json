@@ -10,7 +10,7 @@
     "build:server": "vite build --ssr src/entry-server.tsx --outDir dist/server",
     "prerender": "node scripts/prerender.mjs",
     "preview": "vite preview",
-    "registry:build": "shadcn build"
+    "registry:build": "shadcn build && node scripts/prepare-registry-index.mjs"
   },
   "dependencies": {
     "@fontsource/geist-mono": "^5.2.7",

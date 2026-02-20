@@ -120,7 +120,6 @@ export function Editor({
   const [imageAltText, setImageAltText] = useState("");
   const [sourceValue, setSourceValue] = useState(value);
   const bubbleMenuRef = useRef<HTMLDivElement>(null);
-  const linkInputRef = useRef<HTMLInputElement>(null);
   const prevModeRef = useRef<EditorMode>(mode);
   const sourceDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isSourceMode = mode === "source";
@@ -305,15 +304,6 @@ export function Editor({
       document.removeEventListener("pointerdown", onPointerDown, true);
     };
   }, [showLinkInput, showTableActions, showAltInput, editor]);
-
-  useEffect(() => {
-    if (!showLinkInput) return;
-    const frameId = requestAnimationFrame(() => {
-      linkInputRef.current?.focus();
-      linkInputRef.current?.select();
-    });
-    return () => cancelAnimationFrame(frameId);
-  }, [showLinkInput]);
 
   useEffect(() => {
     if (!editor) return;
@@ -643,17 +633,10 @@ export function Editor({
             >
               <input
                 id="link-url"
-                ref={linkInputRef}
                 type="url"
                 placeholder="https://example.com"
                 value={linkUrl}
                 onChange={(event) => setLinkUrl(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") {
-                    event.preventDefault();
-                    applyLink();
-                  }
-                }}
                 disabled={disabled}
                 className={`${toolbarInputClass} min-w-56 flex-1`}
               />
