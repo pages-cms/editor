@@ -5,18 +5,18 @@
     "moduleResolution": "Bundler",
     "jsx": "react-jsx",
     "strict": true,
+    "skipLibCheck": false,
     "noUncheckedIndexedAccess": true,
     "exactOptionalPropertyTypes": true,
     "noImplicitOverride": true,
     "noPropertyAccessFromIndexSignature": true,
     "noFallthroughCasesInSwitch": true,
     "noEmit": true,
-    "skipLibCheck": true,
     "types": ["vite/client", "node"],
-    "baseUrl": ".",
+    "baseUrl": "../..",
     "paths": {
       "@/*": ["./src/*"]
     }
   },
-  "include": ["src", "registry", "vite.config.ts"]
+  "include": ["./src", "../../src/components/ui"]
 }

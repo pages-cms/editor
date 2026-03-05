@@ -301,11 +301,11 @@ export default function App() {
                 maxImageBytes={2_000_000}
                 onRequestImage={async () => {
                   const src = window.prompt("Image URL");
-                  return src ? { src } : null;
+                  return src ? { kind: "url", src } : null;
                 }}
                 onUploadImage={async (file) => ({
                   src: await fileToDataUrl(file),
-                  alt: file.name || null,
+                  alt: file.name,
                 })}
               />
             </TabsContent>
@@ -360,8 +360,8 @@ export function Example() {
       onChange={setValue}
       onRequestImage={async () => {
         const src = window.prompt("Use URL? Leave empty to simulate file upload")
-        if (src) return { src, alt: "Optional alt text" }
-        return { file: new File(["demo"], "demo.png", { type: "image/png" }) }
+        if (src) return { kind: "url", src, alt: "Optional alt text" }
+        return { kind: "file", file: new File(["demo"], "demo.png", { type: "image/png" }) }
       }}
       enableImagePasteDrop
       imageFallback="data-url"
@@ -528,7 +528,7 @@ export function EditorWithSourceToggle() {
                   </td>
                   <td className="p-2 align-top">
                     <code className={inlineCodeClass}>
-                      (ctx) =&gt; {"{ src, alt?, title? } | { file, alt?, title? }"} | null | Promise&lt;{"{ src, alt?, title? } | { file, alt?, title? }"} | null&gt;
+                      (ctx) =&gt; {"{ kind: \"url\", src, alt?, title? } | { kind: \"file\", file, alt?, title? }"} | null | Promise&lt;{"{ kind: \"url\", src, alt?, title? } | { kind: \"file\", file, alt?, title? }"} | null&gt;
                     </code>
                   </td>
                   <td className="p-2 align-top">-</td>

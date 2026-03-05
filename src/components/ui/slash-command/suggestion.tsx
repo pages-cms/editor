@@ -3,17 +3,20 @@ import type { Editor } from "@tiptap/core";
 import tippy, { type Instance as TippyInstance } from "tippy.js";
 import CommandsList, { type CommandsListHandle, type SlashItem } from "./commands-list";
 import { Code, Heading1, Heading2, Heading3, Image, List, ListOrdered, Pilcrow, Quote, Table } from "lucide-react";
+import type { SuggestionOptions as TiptapSuggestionOptions } from "@tiptap/suggestion";
 
 export type ImagePickerUrlResult = {
+  kind: "url";
   src: string;
-  alt?: string | null;
-  title?: string | null;
+  alt?: string;
+  title?: string;
 };
 
 export type ImagePickerFileResult = {
+  kind: "file";
   file: File;
-  alt?: string | null;
-  title?: string | null;
+  alt?: string;
+  title?: string;
 };
 
 export type ImagePickerResult = ImagePickerUrlResult | ImagePickerFileResult;
@@ -31,59 +34,58 @@ export type SlashImageFallback = "prompt-url" | "none";
 
 type SuggestionOptions = {
   onRequestImage?: ImagePickerHandler | null;
-  onInsertLocalImageFile?: ((context: ImagePickerContext & ImagePickerFileResult) => void | Promise<void>) | null;
+  onInsertLocalImageFile?: ((context: ImagePickerContext & Omit<ImagePickerFileResult, "kind">) => void | Promise<void>) | null;
   enableImages?: boolean;
   imageSlashFallback?: SlashImageFallback;
 };
 
-type SuggestionProps = {
-  editor: Editor;
-  range: { from: number; to: number };
-  query: string;
-  clientRect?: (() => DOMRect | null) | null;
+type RequestImageAndInsertArgs = ImagePickerContext & {
+  onRequestImage: ImagePickerHandler | null;
+  onInsertLocalImageFile: ((context: ImagePickerContext & Omit<ImagePickerFileResult, "kind">) => void | Promise<void>) | null;
+  imageSlashFallback: SlashImageFallback;
 };
 
 const requestImageAndInsert = async ({
   editor,
   range,
   onRequestImage,
+  onInsertLocalImageFile,
   imageSlashFallback = "prompt-url",
-}: ImagePickerContext & {
-  onRequestImage?: ImagePickerHandler | null;
-  onInsertLocalImageFile?: ((context: ImagePickerContext & ImagePickerFileResult) => void | Promise<void>) | null;
-  imageSlashFallback?: SlashImageFallback;
-}) => {
+}: RequestImageAndInsertArgs): Promise<void> => {
   let result: ImagePickerResult | null = null;
   if (onRequestImage) {
     result = await onRequestImage({ editor, range });
   } else if (imageSlashFallback === "prompt-url") {
     const src = window.prompt("Image URL")?.trim();
-    result = src ? { src } : null;
+    result = src ? { kind: "url", src } : null;
   }
 
   if (!result) return;
 
-  if ("file" in result) {
+  if (result.kind === "file") {
     if (!onInsertLocalImageFile) return;
-    await onInsertLocalImageFile({
+    const fileInsertContext: ImagePickerContext & Omit<ImagePickerFileResult, "kind"> = {
       editor,
       range,
       file: result.file,
-      alt: result.alt,
-      title: result.title,
-    });
+      ...(result.alt ? { alt: result.alt } : {}),
+      ...(result.title ? { title: result.title } : {}),
+    };
+    await onInsertLocalImageFile(fileInsertContext);
     return;
   }
+
+  const imageAttrs = {
+    src: result.src,
+    ...(result.alt ? { alt: result.alt } : {}),
+    ...(result.title ? { title: result.title } : {}),
+  };
 
   editor
     .chain()
     .focus()
     .deleteRange(range)
-    .setImage({
-      src: result.src,
-      alt: result.alt ?? null,
-      title: result.title ?? null,
-    })
+    .setImage(imageAttrs)
     .run();
 };
 
@@ -125,9 +127,9 @@ const getAllItems = (options: SuggestionOptions): SlashItem[] => [
       void requestImageAndInsert({
         editor,
         range,
-        onRequestImage: options.onRequestImage,
-        onInsertLocalImageFile: options.onInsertLocalImageFile,
-        imageSlashFallback: options.imageSlashFallback,
+        onRequestImage: options.onRequestImage ?? null,
+        onInsertLocalImageFile: options.onInsertLocalImageFile ?? null,
+        imageSlashFallback: options.imageSlashFallback ?? "prompt-url",
       });
     },
   },
@@ -149,19 +151,23 @@ const getAllItems = (options: SuggestionOptions): SlashItem[] => [
   },
 ];
 
-const createSuggestion = (options: SuggestionOptions = {}) => ({
+type SlashSuggestion = Pick<TiptapSuggestionOptions, "items" | "render">;
+type SuggestionRenderLifecycle = NonNullable<ReturnType<NonNullable<SlashSuggestion["render"]>>>;
+type SuggestionKeyDownProps = Parameters<NonNullable<SuggestionRenderLifecycle["onKeyDown"]>>[0];
+
+const createSuggestion = (options: SuggestionOptions = {}): SlashSuggestion => ({
   items: ({ query }: { query: string }) =>
     getAllItems(options)
       .filter((item) => options.enableImages !== false || item.title !== "Image")
       .filter((item) => item.title.toLowerCase().includes(query.toLowerCase()))
       .slice(0, 10),
 
-  render: () => {
+  render: (): SuggestionRenderLifecycle => {
     let component: ReactRenderer<CommandsListHandle> | null = null;
     let popup: TippyInstance | null = null;
 
     return {
-      onStart: (props: SuggestionProps) => {
+      onStart: (props) => {
         component = new ReactRenderer(CommandsList, {
           props,
           editor: props.editor,
@@ -181,14 +187,15 @@ const createSuggestion = (options: SuggestionOptions = {}) => ({
         });
       },
 
-      onUpdate: (props: SuggestionProps) => {
-        component?.updateProps(props);
+      onUpdate: (props) => {
+        if (!component) return;
+        component.updateProps(props);
         if (!props.clientRect || !popup) return;
         const referenceRect = () => props.clientRect?.() ?? new DOMRect(0, 0, 0, 0);
         popup.setProps({ getReferenceClientRect: referenceRect });
       },
 
-      onKeyDown: ({ event }: { event: KeyboardEvent }) => {
+      onKeyDown: ({ event }: SuggestionKeyDownProps): boolean => {
         if (event.key === "Escape" && popup) {
           popup.hide();
           return true;
@@ -197,7 +204,7 @@ const createSuggestion = (options: SuggestionOptions = {}) => ({
         return component?.ref?.onKeyDown(event) ?? false;
       },
 
-      onExit: () => {
+      onExit: (): void => {
         if (popup) popup.destroy();
         component?.destroy();
       },

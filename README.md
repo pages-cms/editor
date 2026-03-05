@@ -86,8 +86,8 @@ Notes:
 `Editor` supports both pre-uploaded URLs and local file uploads.
 
 - Slash image selector:
-  - Return `{ src }` from `onRequestImage` if the image is already uploaded.
-  - Return `{ file }` from `onRequestImage` to run optimistic upload flow.
+  - Return `{ kind: "url", src }` from `onRequestImage` if the image is already uploaded.
+  - Return `{ kind: "file", file }` from `onRequestImage` to run optimistic upload flow.
 - Paste/drop:
   - Enable with `enableImagePasteDrop`.
   - Provide `onUploadImage` to upload files and return final `{ src }`.
@@ -146,7 +146,7 @@ export function EditorWithSourceToggle() {
 | `disabled` | `boolean` | `false` | Disables editing and toolbar actions. |
 | `enableImages` | `boolean` | `true` | Enables image-related behaviors (slash command and image actions). |
 | `enableImagePasteDrop` | `boolean` | `false` | Enables image file paste and drag/drop insertion. |
-| `onRequestImage` | `(ctx) => { src, alt?, title? } \| { file, alt?, title? } \| null \| Promise<...>` | - | Called by Image slash command. Return `src` for already-uploaded images or `file` for local upload flow. |
+| `onRequestImage` | `(ctx) => { kind: "url", src, alt?, title? } \| { kind: "file", file, alt?, title? } \| null \| Promise<...>` | - | Called by Image slash command. Return a URL result for already-uploaded images or a file result for local upload flow. |
 | `onUploadImage` | `(file, ctx) => { src, alt?, title? } \| null \| Promise<...>` | - | Upload hook for local files (paste/drop/slash file). |
 | `imageFallback` | `"data-url" \| "prompt-url" \| "none"` | `"prompt-url"` | Fallback when no callback inserts an image. |
 | `maxImageBytes` | `number` | `1000000` | Max file size used by `"data-url"` fallback. |

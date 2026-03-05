@@ -10,7 +10,9 @@
     "build:server": "vite build --ssr src/entry-server.tsx --outDir dist/server",
     "prerender": "node scripts/prerender.mjs",
     "preview": "vite preview",
-    "registry:build": "shadcn build"
+    "registry:build": "shadcn build",
+    "check:registry-deps": "node scripts/check-registry-deps.mjs",
+    "fixture:strict": "tsc -p fixtures/strict-consumer/tsconfig.json --noEmit"
   },
   "dependencies": {
     "@fontsource/geist-mono": "^5.2.7",
@@ -25,6 +27,7 @@
     "@tiptap/extension-table-row": "^3.19.0",
     "@tiptap/extension-underline": "^3.19.0",
     "@tiptap/markdown": "^3.19.0",
+    "@tiptap/pm": "^3.19.0",
     "@tiptap/react": "^3.19.0",
     "@tiptap/starter-kit": "^3.19.0",
     "@tiptap/suggestion": "^3.19.0",

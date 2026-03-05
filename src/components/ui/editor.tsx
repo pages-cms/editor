@@ -12,7 +12,7 @@ import TableRow from "@tiptap/extension-table-row";
 import TableHeader from "@tiptap/extension-table-header";
 import TableCell from "@tiptap/extension-table-cell";
 import { Markdown } from "@tiptap/markdown";
-import { DOMSerializer } from "@tiptap/pm/model";
+import { DOMSerializer, type Node as ProseMirrorNode } from "@tiptap/pm/model";
 import { TextSelection } from "@tiptap/pm/state";
 import {
   Bold,
@@ -34,7 +34,14 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import SlashCommands from "./slash-command/commands";
-import type { ImagePickerHandler } from "./slash-command/suggestion";
+import type {
+  ImagePickerContext,
+  ImagePickerFileResult,
+  ImagePickerHandler,
+  ImagePickerResult,
+  ImagePickerUrlResult,
+  SlashImageFallback,
+} from "./slash-command/suggestion";
 
 export type EditorFormat = "html" | "markdown";
 export type ImageFallbackMode = "data-url" | "prompt-url" | "none";
@@ -44,8 +51,8 @@ export type ImageUploadContext = {
 };
 export type ImageUploadResult = {
   src: string;
-  alt?: string | null;
-  title?: string | null;
+  alt?: string;
+  title?: string;
 };
 export type ImageUploadHandler = (
   file: File,
@@ -79,7 +86,7 @@ const UploadableImage = Image.extend({
   },
 });
 
-type EditorProps = {
+export type EditorProps = {
   value?: string;
   onChange?: (value: string) => void;
   disabled?: boolean;
@@ -94,6 +101,14 @@ type EditorProps = {
   className?: string;
   editorClassName?: string;
 } & Omit<HTMLAttributes<HTMLDivElement>, "onChange" | "className">;
+export type {
+  ImagePickerContext,
+  ImagePickerFileResult,
+  ImagePickerHandler,
+  ImagePickerResult,
+  ImagePickerUrlResult,
+  SlashImageFallback,
+};
 
 type ToggleAction = {
   label: string;
@@ -131,6 +146,41 @@ type BlockType =
   | "orderedList"
   | "blockquote"
   | "codeBlock";
+
+type ActiveState = {
+  blockType: BlockType;
+  bold: boolean;
+  italic: boolean;
+  underline: boolean;
+  strike: boolean;
+  code: boolean;
+  link: boolean;
+};
+
+const defaultActiveState: ActiveState = {
+  blockType: "paragraph",
+  bold: false,
+  italic: false,
+  underline: false,
+  strike: false,
+  code: false,
+  link: false,
+};
+
+type UploadableImageAttrs = {
+  src?: unknown;
+  alt?: unknown;
+  title?: unknown;
+  uploadId?: unknown;
+  uploading?: unknown;
+  uploadError?: unknown;
+  [key: string]: unknown;
+};
+
+const toUploadableAttrs = (attrs: unknown): UploadableImageAttrs => {
+  if (!attrs || typeof attrs !== "object") return {};
+  return attrs as UploadableImageAttrs;
+};
 
 const blockOptions: Array<{ value: BlockType; label: string }> = [
   { value: "paragraph", label: "Text" },
@@ -198,7 +248,8 @@ export function Editor({
       TableHeader,
       TableCell,
       Placeholder.configure({
-        placeholder: ({ node }) => (node.type.name === "paragraph" ? "Press '/' for commands" : ""),
+        placeholder: ({ node }: { node: ProseMirrorNode }): string =>
+          node.type.name === "paragraph" ? "Press '/' for commands" : "",
         showOnlyCurrent: true,
         includeChildren: true,
       }),
@@ -206,7 +257,10 @@ export function Editor({
       SlashCommands.configure({
         onRequestImage: enableImages ? (onRequestImage ?? null) : null,
         onInsertLocalImageFile: ({ file, alt, title }) => {
-          void insertLocalImageFile(file, "slash", { alt: alt ?? null, title: title ?? null });
+          void insertLocalImageFile(file, "slash", {
+            ...(alt ? { alt } : {}),
+            ...(title ? { title } : {}),
+          });
         },
         enableImages,
         imageSlashFallback: imageFallback === "prompt-url" ? "prompt-url" : "none",
@@ -286,19 +340,11 @@ export function Editor({
     },
   });
 
-  const activeState = useEditorState({
+  const activeState = (useEditorState({
     editor,
     selector: ({ editor: currentEditor }) => {
       if (!currentEditor) {
-        return {
-          blockType: "paragraph" as BlockType,
-          bold: false,
-          italic: false,
-          underline: false,
-          strike: false,
-          code: false,
-          link: false,
-        };
+        return defaultActiveState;
       }
 
       const blockType: BlockType = currentEditor.isActive("heading", { level: 1 })
@@ -327,7 +373,7 @@ export function Editor({
         link: currentEditor.isActive("link"),
       };
     },
-  });
+  }) as ActiveState | null) ?? defaultActiveState;
 
   useEffect(() => {
     if (!editor) return;
@@ -435,17 +481,17 @@ export function Editor({
 
   if (!editor) return null;
 
-  const updatePendingUploads = (delta: number) => {
+  const updatePendingUploads = (delta: number): void => {
     pendingUploadsRef.current = Math.max(0, pendingUploadsRef.current + delta);
     onPendingUploadsChange?.(pendingUploadsRef.current);
   };
 
-  const createUploadId = () =>
+  const createUploadId = (): string =>
     typeof crypto !== "undefined" && "randomUUID" in crypto
       ? crypto.randomUUID()
       : `upload-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 
-  const fileToDataUrl = (file: File) =>
+  const fileToDataUrl = (file: File): Promise<string> =>
     new Promise<string>((resolve, reject) => {
       const reader = new FileReader();
       reader.onerror = () => reject(new Error("Failed to read image file."));
@@ -453,12 +499,15 @@ export function Editor({
       reader.readAsDataURL(file);
     });
 
-  const findImageNodeByUploadId = (uploadId: string) => {
-    let match: { pos: number; attrs: Record<string, unknown> } | null = null;
+  const findImageNodeByUploadId = (
+    uploadId: string,
+  ): { pos: number; attrs: UploadableImageAttrs } | null => {
+    let match: { pos: number; attrs: UploadableImageAttrs } | null = null;
     editor.state.doc.descendants((node, pos) => {
       if (node.type.name !== "image") return true;
-      if (node.attrs.uploadId === uploadId) {
-        match = { pos, attrs: node.attrs as Record<string, unknown> };
+      const attrs = toUploadableAttrs(node.attrs);
+      if (attrs.uploadId === uploadId) {
+        match = { pos, attrs };
         return false;
       }
       return true;
@@ -468,8 +517,8 @@ export function Editor({
 
   const finalizeImageUpload = (
     uploadId: string,
-    updater: (currentAttrs: Record<string, unknown>) => Record<string, unknown> | null,
-  ) => {
+    updater: (currentAttrs: UploadableImageAttrs) => UploadableImageAttrs | null,
+  ): boolean => {
     const match = findImageNodeByUploadId(uploadId);
     if (!match) return false;
 
@@ -480,7 +529,7 @@ export function Editor({
     return true;
   };
 
-  const cleanupUpload = (uploadId: string, options?: { revokeBlob?: boolean }) => {
+  const cleanupUpload = (uploadId: string, options?: { revokeBlob?: boolean }): void => {
     const shouldRevoke = options?.revokeBlob ?? true;
     const objectUrl = objectUrlByUploadIdRef.current.get(uploadId);
     if (shouldRevoke && objectUrl) URL.revokeObjectURL(objectUrl);
@@ -494,12 +543,12 @@ export function Editor({
   const insertLocalImageFile = async (
     file: File,
     source: "paste" | "drop" | "slash",
-    initialAttrs?: { alt?: string | null; title?: string | null },
-  ) => {
+    initialAttrs?: { alt?: string; title?: string },
+  ): Promise<void> => {
     if (!file.type.startsWith("image/")) return;
     const uploadId = createUploadId();
     const blobUrl = URL.createObjectURL(file);
-    const fallbackAlt = initialAttrs?.alt ?? file.name ?? null;
+    const fallbackAlt = initialAttrs?.alt ?? file.name;
 
     objectUrlByUploadIdRef.current.set(uploadId, blobUrl);
     expectedBlobByUploadIdRef.current.set(uploadId, blobUrl);
@@ -513,7 +562,7 @@ export function Editor({
         attrs: {
           src: blobUrl,
           alt: fallbackAlt,
-          title: initialAttrs?.title ?? null,
+          title: initialAttrs?.title,
           uploadId,
           uploading: true,
           uploadError: null,
@@ -541,7 +590,7 @@ export function Editor({
         return;
       }
 
-      finalizeImageUpload(uploadId, (attrs) => {
+      finalizeImageUpload(uploadId, (attrs): UploadableImageAttrs | null => {
         const expectedBlob = expectedBlobByUploadIdRef.current.get(uploadId);
         const currentSrc = typeof attrs.src === "string" ? attrs.src : "";
         if (!expectedBlob || currentSrc !== expectedBlob) return null;
@@ -549,8 +598,8 @@ export function Editor({
         return {
           ...attrs,
           src: resolved.src,
-          alt: resolved.alt ?? attrs.alt ?? null,
-          title: resolved.title ?? attrs.title ?? null,
+          alt: resolved.alt ?? (typeof attrs.alt === "string" ? attrs.alt : undefined),
+          title: resolved.title ?? (typeof attrs.title === "string" ? attrs.title : undefined),
           uploading: false,
           uploadError: null,
           uploadId: null,
@@ -568,13 +617,13 @@ export function Editor({
     }
   };
 
-  const insertImagesFromFiles = async (files: File[], source: "paste" | "drop") => {
+  const insertImagesFromFiles = async (files: File[], source: "paste" | "drop"): Promise<void> => {
     for (const file of files) {
       await insertLocalImageFile(file, source);
     }
   };
 
-  const setBlockType = (next: BlockType) => {
+  const setBlockType = (next: BlockType): void => {
     const chain = editor.chain().focus();
 
     switch (next) {
@@ -655,7 +704,9 @@ export function Editor({
       setShowLinkInput(false);
       return;
     }
-    setLinkUrl(editor.isActive("link") ? (editor.getAttributes("link").href as string) || "" : "");
+    const linkAttrs = editor.getAttributes("link");
+    const href = typeof linkAttrs["href"] === "string" ? linkAttrs["href"] : "";
+    setLinkUrl(editor.isActive("link") ? href : "");
     setShowLinkInput(true);
     setShowTableActions(false);
     setShowAltInput(false);
@@ -674,7 +725,8 @@ export function Editor({
       setShowAltInput(false);
       return;
     }
-    const alt = editor.getAttributes("image").alt;
+    const imageAttrs = editor.getAttributes("image");
+    const alt = imageAttrs["alt"];
     setImageAltText(typeof alt === "string" ? alt : "");
     setShowAltInput(true);
     setShowLinkInput(false);
@@ -711,7 +763,7 @@ export function Editor({
       .chain()
       .focus()
       .updateAttributes("image", {
-        alt: trimmed || null,
+        alt: trimmed || undefined,
       })
       .run();
     setShowAltInput(false);
@@ -719,7 +771,7 @@ export function Editor({
 
   const clearImageAlt = () => {
     if (!enableImages || !isOnImage) return;
-    editor.chain().focus().updateAttributes("image", { alt: null }).run();
+    editor.chain().focus().updateAttributes("image", {}).run();
     setImageAltText("");
     setShowAltInput(false);
   };
