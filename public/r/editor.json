@@ -6,6 +6,7 @@
   "dependencies": [
     "lucide-react",
     "@tiptap/core",
+    "@tiptap/extension-placeholder",
     "@tiptap/extension-image",
     "@tiptap/extension-link",
     "@tiptap/extension-table",
@@ -14,6 +15,7 @@
     "@tiptap/extension-table-row",
     "@tiptap/extension-underline",
     "@tiptap/markdown",
+    "@tiptap/pm",
     "@tiptap/react",
     "@tiptap/starter-kit",
     "@tiptap/suggestion",

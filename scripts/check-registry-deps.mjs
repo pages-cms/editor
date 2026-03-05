@@ -4,9 +4,14 @@ import { join, extname } from "node:path";
 const rootDir = process.cwd();
 const registryDir = join(rootDir, "registry", "default");
 const packageJsonPath = join(rootDir, "package.json");
+const registryManifestPath = join(rootDir, "registry.json");
 
 const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf8"));
 const declared = new Set(Object.keys(packageJson.dependencies ?? {}));
+const registryManifest = JSON.parse(readFileSync(registryManifestPath, "utf8"));
+const registryItem = (registryManifest.items ?? []).find((item) => item.name === "editor");
+const registryDeclared = new Set(registryItem?.dependencies ?? []);
+const IGNORED_PACKAGES = new Set(["react", "react-dom"]);
 
 const sourceFiles = [];
 const walk = (dir) => {
@@ -56,26 +61,56 @@ const readImports = (source) => {
 
 walk(registryDir);
 
-const missing = new Map();
+const missingInPackage = new Map();
+const missingInRegistryManifest = new Map();
 for (const file of sourceFiles) {
   const source = readFileSync(file, "utf8");
   for (const specifier of readImports(source)) {
     if (!isPackageImport(specifier)) continue;
     const packageName = toPackageName(specifier);
-    if (declared.has(packageName)) continue;
-
-    if (!missing.has(packageName)) missing.set(packageName, new Set());
-    missing.get(packageName).add(specifier);
+    if (IGNORED_PACKAGES.has(packageName)) continue;
+    if (!declared.has(packageName)) {
+      if (!missingInPackage.has(packageName)) missingInPackage.set(packageName, new Set());
+      missingInPackage.get(packageName).add(specifier);
+    }
+    if (!registryDeclared.has(packageName)) {
+      if (!missingInRegistryManifest.has(packageName)) {
+        missingInRegistryManifest.set(packageName, new Set());
+      }
+      missingInRegistryManifest.get(packageName).add(specifier);
+    }
   }
 }
 
-if (missing.size > 0) {
-  console.error("Registry dependency check failed. Missing dependencies:");
-  for (const [pkg, specifiers] of missing.entries()) {
-    const used = Array.from(specifiers).sort().join(", ");
-    console.error(`- ${pkg} (imports: ${used})`);
+if (missingInPackage.size > 0 || missingInRegistryManifest.size > 0) {
+  console.error("Registry dependency check failed.");
+  if (missingInPackage.size > 0) {
+    console.error("Missing from package.json dependencies:");
+    for (const [pkg, specifiers] of missingInPackage.entries()) {
+      const used = Array.from(specifiers).sort().join(", ");
+      console.error(`- ${pkg} (imports: ${used})`);
+    }
+  }
+  if (missingInRegistryManifest.size > 0) {
+    console.error("Missing from registry.json item dependencies:");
+    for (const [pkg, specifiers] of missingInRegistryManifest.entries()) {
+      const used = Array.from(specifiers).sort().join(", ");
+      console.error(`- ${pkg} (imports: ${used})`);
+    }
   }
   process.exit(1);
+}
+
+if (!registryItem) {
+  console.error('Registry dependency check failed. Missing "editor" item in registry.json.');
+  process.exit(1);
+}
+
+for (const pkg of registryDeclared) {
+  if (!declared.has(pkg)) {
+    console.error(`Registry dependency check failed. "${pkg}" is in registry.json but missing from package.json dependencies.`);
+    process.exit(1);
+  }
 }
 
 console.log("Registry dependency check passed.");
