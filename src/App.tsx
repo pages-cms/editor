@@ -345,6 +345,11 @@ export default function App() {
             pass <code className={inlineCodeClass}>onRequestImage</code> to replace the default image prompt with your
             own modal or picker, plus <code className={inlineCodeClass}>onUploadImage</code> for paste/drop uploads.
           </p>
+          <p className="mt-4 leading-relaxed">
+            During uploads, the editor inserts a temporary local preview immediately, then preloads the final uploaded
+            URL before swapping <code className={inlineCodeClass}>src</code>. If preload fails or times out, it keeps
+            the temporary preview and marks an upload error on that image.
+          </p>
           <HighlightedCode
             dark={resolvedIsDark}
             lang="tsx"

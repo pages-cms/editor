@@ -92,6 +92,9 @@ Notes:
   - Enable with `enableImagePasteDrop`.
   - Provide `onUploadImage` to upload files and return final `{ src }`.
   - Optional fallback with `imageFallback="data-url"` for base64 insertion.
+- Swap behavior:
+  - The editor preloads the final uploaded URL before replacing the temporary `blob:` preview.
+  - If preload fails or times out, the editor keeps the temporary preview and marks the image with an upload error state.
 - Pending uploads:
   - Use `onPendingUploadsChange` to disable autosave/publish while uploads are in progress.
 
